@@ -9,7 +9,7 @@ IO::Socket - Object interface to socket communications
     use warnings;
     use feature 'say';
 
-    use IO::Socket qw(AF_INET AF_UNIX SOCK_STREAM);
+    use IO::Socket qw(AF_INET AF_UNIX SOCK_STREAM SHUT_WR);
 
     # create a new AF_INET socket
     my $sock = IO::Socket->new(Domain => AF_INET);
@@ -52,7 +52,7 @@ IO::Socket - Object interface to socket communications
         $client->send($data);
 
         # notify client that response has been sent
-        $client->shutdown(1);
+        $client->shutdown(SHUT_WR);
     }
 
     $server->close();
@@ -71,7 +71,7 @@ IO::Socket - Object interface to socket communications
     my $size = $client->send("Hello World!");
     say "Sent data of length: $size";
 
-    $client->shutdown(1);
+    $client->shutdown(SHUT_WR);
 
     my $buffer;
     $client->recv($buffer, 1024);
@@ -131,41 +131,32 @@ This argument is B<required>. All other arguments are optional.
 
     my $sock = IO::Socket->new(..., Listen => 5);
 
-Listen should be provided an integer value or left unset.
+Listen should be an integer value or left unset.
 
 If provided, this argument will place the socket into listening mode. New
 connections can then be accepted using the L<IO::Socket/"accept"> method. The
 value given is used as the C<listen(2)> queue size.
 
-=head2 Proto
-
-    my $sock = IO::Socket->new(..., Proto => IO::Socket::IPPROTO_TCP);
-    $sock = IO::Socket->new(..., Proto => 'tcp');
-
-The IP protocol used for this socket. It can either be the string name or the
-numeric value in the constants (C<'tcp'>, C<IPPROTO_TCP>, C<'udp'>, or
-C<IPPROTO_UDP>). If this argument is left undefined, either C<getaddrinfo> or
-the kernel will choose an appropriate value.
+If the C<Listen> argument is given, but false, the queue size will be set to 5.
 
 =head2 Timeout
 
     my $sock = IO::Socket->new(..., Timeout => 5);
 
-The timeout value, in seconds, for this socket connection.
+The timeout value, in seconds, for this socket connection. How exactly this
+value is utilized is defined in the socket domain subclasses that make use of
+the value.
 
 =head2 Type
 
     my $sock = IO::Socket->new(..., Type => IO::Socket::SOCK_STREAM);
 
-The socket type that will be passed along to C<getaddrinfo>. These are usually
-C<SOCK_STREAM>, C<SOCK_DGRAM>, or C<SOCK_RAW>. If this argument is left
-undefined, C<getaddrinfo> may attempt to infer the type from the service name.
+The socket type that will be used. These are usually C<SOCK_STREAM>,
+C<SOCK_DGRAM>, or C<SOCK_RAW>. If this argument is left undefined an attempt
+will be made to infer the type from the service name.
 
 For example, you'll usually use C<SOCK_STREAM> with a C<tcp> connection and
 C<SOCK_DGRAM> with a C<udp> connection.
-
-C<SOCK_RAW> sockets allow IP protocols to be implemented in user space. A
-raw socket receives or sends the raw datagram not including link level headers.
 
 =head1 CONSTRUCTORS
 
@@ -220,12 +211,6 @@ This differs slightly from the C<accept> function in L<perlfunc>.
 In a scalar context the new socket is returned, or C<undef> upon
 failure. In a list context a two-element array is returned containing
 the new socket and the peer address; the list will be empty upon failure.
-
-The timeout in the package can be specified as zero to effect a C<poll>,
-but you shouldn't do that because a new L<IO::Select> object will be
-created behind the scenes just to do the single poll.  This is
-horrendously inefficient.  Use rather true C<select()> with a zero
-timeout on the handle, or non-blocking IO.
 
 =head2 atmark
 
@@ -298,9 +283,12 @@ C<undef>.
 =head2 getsockopt
 
     my $value = $sock->getsockopt(SOL_SOCKET, SO_REUSEADDR);
+    my $buf = $socket->getsockopt(SOL_SOCKET, SO_RCVBUF);
+    say "Receive buffer is $buf bytes";
 
 Get an option associated with the socket. Levels other than C<SOL_SOCKET>
-may be specified here.
+may be specified here. As a convenience, this method will unpack a byte buffer
+of the correct size back into a number.
 
 =head2 listen
 
@@ -321,7 +309,7 @@ connection. It calls C<getpeername>.
 
     my $proto = $sock->protocol();
 
-Returns the numerical number for the protocol being used on the socket, if
+Returns the number for the protocol being used on the socket, if
 known. If the protocol is unknown, as with an C<AF_UNIX> socket, zero
 is returned.
 
@@ -366,15 +354,17 @@ error. The C<sendmsg(2)> syscall is currently unimplemented.
 =head2 setsockopt
 
     $sock->setsockopt(SOL_SOCKET, SO_REUSEADDR, 1);
+    $sock->setsockopt(SOL_SOCKET, SO_RCVBUF, 64*1024);
 
 Set option associated with the socket. Levels other than C<SOL_SOCKET>
-may be specified here.
+may be specified here. As a convenience, this method will convert a number into
+a packed byte buffer.
 
 =head2 shutdown
 
-    $sock->shutdown(0); # we stopped reading data
-    $sock->shutdown(1); # we stopped writing data
-    $sock->shutdown(2); # we stopped using this socket
+    $sock->shutdown(SHUT_RD); # we stopped reading data
+    $sock->shutdown(SHUT_WR); # we stopped writing data
+    $sock->shutdown(SHUT_RDWR); # we stopped using this socket
 
 Shuts down a socket connection in the manner indicated by the value passed in,
 which has the same interpretation as in the syscall of the same name.
@@ -391,7 +381,7 @@ not a valid filehandle, or returns C<0> and sets C<$!> for any other failure.
 
     my $domain = $sock->sockdomain();
 
-Returns the numerical number for the socket domain type. For example, for
+Returns the number for the socket domain type. For example, for
 an C<AF_INET> socket the value of C<&AF_INET> will be returned.
 
 =head2 socket
@@ -418,9 +408,8 @@ a bit simpler.
 
     my $packed_addr = $sock->sockname();
 
-Returns the packed C<sockaddr> address of this end of the connection, in case
-you don't know the address because you have several different IPs that the
-connection might have come in on. It's the same as C<getsockname(2)>.
+Returns the packed C<sockaddr> address of this end of the connection. It's the
+same as C<getsockname(2)>.
 
 =head2 sockopt
 
@@ -435,7 +424,7 @@ L<IO::Socket/"setsockopt"> is called.
 
     my $type = $sock->socktype();
 
-Returns the numerical number for the socket type. For example, for
+Returns the number for the socket type. For example, for
 a C<SOCK_STREAM> socket the value of C<&SOCK_STREAM> will be returned.
 
 =head2 timeout
@@ -447,6 +436,9 @@ Set or get the timeout value (in seconds) associated with this socket.
 If called without any arguments then the current setting is returned. If
 called with an argument the current setting is changed and the previous
 value returned.
+
+This method is available to all L<IO::Socket> implementations but may or may
+not be used by the individual domain subclasses.
 
 =head1 LIMITATIONS
 
