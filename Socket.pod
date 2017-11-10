@@ -96,7 +96,8 @@ L<IO::Socket> will export all functions (and constants) defined by L<Socket>.
 =head1 CONSTRUCTOR ARGUMENTS
 
 Given that L<IO::Socket> doesn't have attributes in the traditional sense, the
-following arguments, rather than attributes, can be passed into the constructor.
+following arguments, rather than attributes, can be passed into the
+constructor.
 
 Constructor arguments should be passed in C<< key => 'value' >> pairs.
 
@@ -122,8 +123,9 @@ C<AF_INET> is for the internet address family of sockets and is handled via
 L<IO::Socket::INET>. C<AF_INET> sockets are bound to an internet address and
 port.
 
-C<AF_UNIX> is for the unix domain socket and is handled via L<IO::Socket::UNIX>.
-C<AF_UNIX> sockets are bound to the file system as their address name space.
+C<AF_UNIX> is for the unix domain socket and is handled via
+L<IO::Socket::UNIX>. C<AF_UNIX> sockets are bound to the file system as their
+address name space.
 
 This argument is B<required>. All other arguments are optional.
 
@@ -137,7 +139,8 @@ If provided, this argument will place the socket into listening mode. New
 connections can then be accepted using the L<IO::Socket/"accept"> method. The
 value given is used as the C<listen(2)> queue size.
 
-If the C<Listen> argument is given, but false, the queue size will be set to 5.
+If the C<Listen> argument is given, but false, the queue size will be set to
+5.
 
 =head2 Timeout
 
@@ -174,22 +177,21 @@ L<IO::Socket> extends the L<IO::Handle> constructor.
     # Domain is the only required argument
     $sock = IO::Socket->new(
         Domain => IO::Socket::AF_INET, # AF_INET, AF_UNIX
-        Type => IO::Socket::SOCK_STREAM, # SOCK_STREAM, SOCK_DGRAM, SOCK_RAW
+        Type => IO::Socket::SOCK_STREAM, # SOCK_STREAM, SOCK_DGRAM, ...
         Proto => 'tcp', # 'tcp', 'udp', IPPROTO_TCP, IPPROTO_UDP
         # and so on...
     );
 
 Creates an C<IO::Socket>, which is a reference to a newly created symbol (see
-the L<Symbol> package). C<new> optionally takes arguments, these arguments are
-defined in L<IO::Socket/"CONSTRUCTOR ARGUMENTS">.
+the L<Symbol> package). C<new> optionally takes arguments, these arguments
+are defined in L<IO::Socket/"CONSTRUCTOR ARGUMENTS">.
 
 Any of the L<IO::Socket/"CONSTRUCTOR ARGUMENTS"> may be passed to the
 constructor, but if any arguments are provided, then one of them must be
 the L<IO::Socket/"Domain"> argument. The L<IO::Socket/"Domain"> argument can,
 by default, be either C<AF_INET> or C<AF_UNIX>. Other domains can be used if a
-proper subclass for the domain family is registered. All other arguments will be
-passed to the L<IO::Socket/"configuration"> method of the package for that
-domain.
+proper subclass for the domain family is registered. All other arguments will
+be passed to the C<configuration> method of the package for that domain.
 
 =head1 METHODS
 
@@ -271,14 +273,14 @@ rather than C<undef>, in either case.  Thus, in general, it cannot
 be used to reliably learn whether the peer has initiated a graceful shutdown
 because in most cases (see below) the local TCP state machine remains in
 B<CLOSE-WAIT> until the local application calls L<IO::Socket/"shutdown"> or
-L<IO::Socket/"close">. Only at that point does this function return C<undef>.
+C<close>. Only at that point does this function return C<undef>.
 
 The "in most cases" hedge is because local TCP state machine behavior may
 depend on the peer's socket options. In particular, if the peer socket has
-C<SO_LINGER> enabled with a zero timeout, then the peer's C<close> will generate
-a C<RST> segment. Upon receipt of that segment, the local TCP transitions
-immediately to B<CLOSED>, and in that state, this method I<will> return
-C<undef>.
+C<SO_LINGER> enabled with a zero timeout, then the peer's C<close> will
+generate a C<RST> segment. Upon receipt of that segment, the local TCP
+transitions immediately to B<CLOSED>, and in that state, this method I<will>
+return C<undef>.
 
 =head2 getsockopt
 
@@ -324,10 +326,12 @@ Receives a message on a socket. Attempts to receive C<$length> characters of
 data into C<$buffer> from the specified socket. C<$buffer> will be grown or
 shrunk to the length actually read. Takes the same flags as the system call of
 the same name. Returns the address of the sender if socket's protocol supports
-this; returns an empty string otherwise. If there's an error, returns C<undef>.
-This call is actually implemented in terms of the C<recvfrom(2)> system call.
+this; returns an empty string otherwise. If there's an error, returns
+C<undef>. This call is actually implemented in terms of the C<recvfrom(2)>
+system call.
 
-Flags are ORed together values, such as C<MSG_BCAST>, C<MSG_OOB>, C<MSG_TRUNC>.
+Flags are ORed together values, such as C<MSG_BCAST>, C<MSG_OOB>,
+C<MSG_TRUNC>.
 
 Note the characters: depending on the status of the socket, either (8-bit)
 bytes or characters are received. By default all sockets operate on bytes, but
@@ -345,11 +349,11 @@ C<:encoding> layer: in that case pretty much any characters can be read.
     $sent = $sock->send($message, $flags);
     $sent = $sock->send($message, $flags, $to);
 
-Sends a message on a socket. Attempts to send the scalar message to the socket.
-Takes the same flags as the system call of the same name. On unconnected
-sockets, you must specify a destination to send to, in which case it does a
-C<sendto(2)> syscall. Returns the number of characters sent, or C<undef> on
-error. The C<sendmsg(2)> syscall is currently unimplemented.
+Sends a message on a socket. Attempts to send the scalar message to the
+socket. Takes the same flags as the system call of the same name. On
+unconnected sockets, you must specify a destination to send to, in which case
+it does a C<sendto(2)> syscall. Returns the number of characters sent, or
+C<undef> on error. The C<sendmsg(2)> syscall is currently unimplemented.
 
 =head2 setsockopt
 
@@ -357,8 +361,8 @@ error. The C<sendmsg(2)> syscall is currently unimplemented.
     $sock->setsockopt(SOL_SOCKET, SO_RCVBUF, 64*1024);
 
 Set option associated with the socket. Levels other than C<SOL_SOCKET>
-may be specified here. As a convenience, this method will convert a number into
-a packed byte buffer.
+may be specified here. As a convenience, this method will convert a number
+into a packed byte buffer.
 
 =head2 shutdown
 
@@ -370,8 +374,8 @@ Shuts down a socket connection in the manner indicated by the value passed in,
 which has the same interpretation as in the syscall of the same name.
 
 This is useful with sockets when you want to tell the other side you're done
-writing but not done reading, or vice versa. It's also a more insistent form of
-L<IO::Socket/"close"> because it also disables the file descriptor in any
+writing but not done reading, or vice versa. It's also a more insistent form
+of C<close> because it also disables the file descriptor in any
 forked copies in other processes.
 
 Returns C<1> for success; on error, returns C<undef> if the socket is
@@ -391,18 +395,20 @@ an C<AF_INET> socket the value of C<&AF_INET> will be returned.
     # domain, type, and protocol are required
     $sock = $sock->socket(AF_INET, SOCK_STREAM, 'tcp');
 
-Opens a socket of the specified kind and returns it. Domain, type, and protocol
-are specified the same as for the syscall of the same name.
+Opens a socket of the specified kind and returns it. Domain, type, and
+protocol are specified the same as for the syscall of the same name.
 
 =head2 socketpair
 
-    my ($read, $write) = $sock->socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC);
-    ($read, $write) = IO::Socket::UNIX->socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC);
+    my ($r, $w) = $sock->socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC);
+    ($r, $w) = IO::Socket::UNIX
+        ->socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC);
 
-Will return a list of two sockets created, or an empty list on failure.
+Will return a list of two sockets created (read and write), or an empty list
+on failure.
 
-Differs slightly from C<socketpair> in L<perlfunc> in that the argument list is
-a bit simpler.
+Differs slightly from C<socketpair> in L<perlfunc> in that the argument list
+is a bit simpler.
 
 =head2 sockname
 
@@ -416,8 +422,8 @@ same as C<getsockname(2)>.
     my $value = $sock->sockopt(SO_REUSEADDR);
     $sock->sockopt(SO_REUSEADDR, 1);
 
-Unified method to both set and get options in the C<SOL_SOCKET> level. If called
-with one argument then L<IO::Socket/"getsockopt"> is called, otherwise
+Unified method to both set and get options in the C<SOL_SOCKET> level. If
+called with one argument then L<IO::Socket/"getsockopt"> is called, otherwise
 L<IO::Socket/"setsockopt"> is called.
 
 =head2 socktype
